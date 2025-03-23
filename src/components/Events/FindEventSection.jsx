@@ -9,9 +9,10 @@ export default function FindEventSection() {
    const searchElement = useRef();
    const [searchTerm, setSearchTerm] = useState("");
 
-   const { data, isPending, isError, error } = useQuery({
+   const { data, isLoading, isError, error } = useQuery({
       queryKey: ["events", { search: searchTerm }],
       queryFn: ({ signal }) => fetchEvents({ searchTerm, signal }),
+      enabled: searchTerm.length > 0,
       // staleTime: 5000,
    });
 
@@ -22,7 +23,7 @@ export default function FindEventSection() {
 
    let content = <p>Please enter a search term and to find events.</p>;
 
-   if (isPending) {
+   if (isLoading) {
       content = <LoadingIndicator />;
    }
 
