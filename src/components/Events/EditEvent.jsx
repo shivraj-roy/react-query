@@ -15,15 +15,22 @@ export default function EditEvent() {
    });
    const { mutate } = useMutation({
       mutationFn: updateEvent,
-      onSuccess: () => {
-         queryClient.invalidateQueries({
-            queryKey: ["events"],
-         });
-         navigate("../");
+      onMutate: async ({ event }) => {
+         await queryClient.cancelQueries({ queryKey: ["events", id] });
+         const previousEvent = queryClient.getQueryData(["events", id]);
+         queryClient.setQueryData(["events", id], event);
+         return { previousEvent };
+      },
+      onError: (error, variables, context) => {
+         queryClient.setQueryData(["events", id], context.previousEvent);
+      },
+      onSettled: () => {
+         queryClient.invalidateQueries({ queryKey: ["events", id] });
       },
    });
    function handleSubmit(formData) {
       mutate({ id, event: formData });
+      navigate("../");
    }
 
    function handleClose() {
