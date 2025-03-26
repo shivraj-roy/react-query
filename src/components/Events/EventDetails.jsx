@@ -1,16 +1,29 @@
-import { Link, Outlet, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { fetchEvent } from "../../utils/http.js";
+import { Link, Outlet, useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { fetchEvent, deleteEvent } from "../../utils/http.js";
+import { queryClient } from "../../utils/http.js";
 import Header from "../Header.jsx";
 import LoadingIndicator from "../UI/LoadingIndicator.jsx";
 import ErrorBlock from "../UI/ErrorBlock.jsx";
 
 export default function EventDetails() {
    const { id } = useParams();
+   const navigate = useNavigate();
    const { data, isPending, isError, error } = useQuery({
       queryKey: ["events", id],
-      queryFn: () => fetchEvent({ id }),
+      queryFn: ({ signal }) => fetchEvent({ id, signal }),
       staleTime: 3000,
+   });
+
+   const deleteEventMutation = useMutation({
+      mutationFn: deleteEvent,
+      onSuccess: () => {
+         queryClient.invalidateQueries({
+            queryKey: ["events"],
+            refetchType: "none", // This is to prevent the query from refetching the data when the mutation is successful...
+         });
+         navigate("../");
+      },
    });
 
    return (
@@ -34,7 +47,14 @@ export default function EventDetails() {
                   <header>
                      <h1>{data.title}</h1>
                      <nav>
-                        <button>Delete</button>
+                        <button
+                           onClick={() => deleteEventMutation.mutate({ id })}
+                           disabled={deleteEventMutation.isPending}
+                        >
+                           {deleteEventMutation.isPending
+                              ? "Deleting..."
+                              : "Delete"}
+                        </button>
                         <Link to="edit">Edit</Link>
                      </nav>
                   </header>
@@ -47,7 +67,12 @@ export default function EventDetails() {
                         <div>
                            <p id="event-details-location">{data.location}</p>
                            <time dateTime={`${data.date}T${data.time}`}>
-                              {data.date} @ {data.time}
+                              {new Date(data.date).toLocaleDateString("en-US", {
+                                 year: "numeric",
+                                 month: "short",
+                                 day: "numeric",
+                              })}{" "}
+                              @ {data.time}
                            </time>
                         </div>
                         <p id="event-details-description">{data.description}</p>
